@@ -6,6 +6,8 @@ var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/signif
 d3.json(queryUrl, function(data) {
   // Once we get a response, send the data.features object to the createFeatures function
 
+  console.log (data.features);
+
   createFeatures(data.features);
 });
 
@@ -14,15 +16,65 @@ function createFeatures(earthquakeData) {
   // Define a function we want to run once for each feature in the features array
   // Give each feature a popup describing the place and time of the earthquake
   function onEachFeature(feature, layer) {
-    layer.bindPopup("<h3>" + feature.properties.place +
-      "</h3><hr><p>" + new Date(feature.properties.time) + "</p>");
+    
+    var place = feature.properties.place;
+    var lon = feature.geometry.coordinates[0];
+    var lat = feature.geometry.coordinates[1];
+    var location = [lat,lon]
+    var depth = feature.geometry.coordinates[2];
+    
+    console.log ("feature",feature);
+    console.log (feature.properties.place);
+    console.log (feature.geometry.coordinates[0]);
+    console.log (feature.geometry.coordinates[1]);
+    console.log (feature.geometry.coordinates[2]);
+    console.log (location);
+    console.log ("depth",depth);
+    
+
+    layer.bindPopup("<h3>" + feature.properties.place + 
+      "</h3><hr><p>" + new Date(feature.properties.time) + "</p>"
+      + "</h1> <hr> <h3>Depth: "+ (feature.geometry.coordinates[2]) + "</p>");
+
+    function getColor(depth) {
+      // Conditionals for colors
+      if (depth > 90) {
+        return "red";
+      }
+      else if (depth > 70) {
+        return "yellow-orange";
+      }
+      else if (depth > 50) {
+        return "orange";
+      }
+      else {
+        return "green";
+      }
+  }
+
+    
+     // Add circles to map
+      L.circle(location, {
+      fillOpacity: 0.75,
+      color: "white",
+      fillColor: getColor(depth),
+    // Adjust radius
+      // radius: earthquakeData.depth * 1500
+  })
+  
+  // ).bindPopup("<h1>" + feature.properties.place + "</h1> <hr> <h3>Depth: " + feature.geometry.coordinates[2] + "</h3>").addTo(myMap);
+
   }
 
   // Create a GeoJSON layer containing the features array on the earthquakeData object
   // Run the onEachFeature function once for each piece of data in the array
-  var earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeature
-  });
+  var earthquakes = new L.LayerGroup()
+  L.geoJSON(earthquakeData, {
+    pointTolayer: function (_, longLat){
+    return L.circleMarker(longLat)
+    } ,
+    // onEachFeature: onEachFeature
+  }).addTo(earthquakes);
 
   // Sending our earthquakes layer to the createMap function
   createMap(earthquakes);
@@ -30,7 +82,7 @@ function createFeatures(earthquakeData) {
 
 function createMap(earthquakes) {
 
-  // Define streetmap and darkmap layers
+  // Define streetmap layer
   var streetmap = L.tileLayer("https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
     attribution: "© <a href='https://www.mapbox.com/about/maps/'>Mapbox</a> © <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a> <strong><a href='https://www.mapbox.com/map-feedback/' target='_blank'>Improve this map</a></strong>",
     tileSize: 512,
@@ -58,6 +110,7 @@ function createMap(earthquakes) {
     zoom: 5,
     layers: [streetmap, earthquakes]
   });
+  earthquakes.addTo(myMap)
 
   // Create a layer control
   // Pass in our baseMaps and overlayMaps
@@ -65,4 +118,6 @@ function createMap(earthquakes) {
   // L.control.layers(baseMaps, overlayMaps, {
   //   collapsed: false
   // }).addTo(myMap);
+
+ 
 }
